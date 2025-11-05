@@ -1,0 +1,30 @@
+[project]
+name = "fast-web-02"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.10"
+dependencies = [
+    "aiomysql>=0.3.2",
+    "bcrypt>=5.0.0",
+    "black>=25.9.0",
+    "cryptography>=46.0.3",
+    "email-validator>=2.0.0",
+    "fastapi[all]>=0.120.0",
+    "pydantic-settings>=2.11.0",
+    "tortoise-orm>=0.25.1",
+    "loguru>=0.7.0",
+    "pymysql>=1.1.2",
+    "aerich>=0.7.0",
+    "uvicorn>=0.30.0",
+    "python-jose>=3.3.0",
+    "jose>=1.0.0",
+]
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+
+[tool.aerich]
+tortoise_orm = "app.core.config.TORTOISE_ORM"
+location = "./migrations"
+src_folder = "./."

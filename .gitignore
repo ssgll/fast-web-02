@@ -1,0 +1,13 @@
+**/__pycache__/
+**/.pytest_cache/
+**/.venv/
+**/.idea/
+**/.vscode/
+**/.github/
+**/.mypy_cache/
+test/
+
+# Ignore all files and directories listed above
+uv.lock
+
+main.py
