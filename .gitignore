@@ -5,9 +5,11 @@
 **/.vscode/
 **/.github/
 **/.mypy_cache/
-test/
+**/test/
+**/logs/
+**/migrations/
+**/.git/
 
 # Ignore all files and directories listed above
-uv.lock
-
 main.py
+.gitignore
