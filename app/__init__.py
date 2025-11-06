@@ -15,9 +15,11 @@ from app.exceptions.exception import (
 
 # 导入中间件
 from app.middleware.logging_middleware import LoggingMiddleware
+from app.middleware.cors_middleware import CORSMiddleware
 
 # 创建FastAPI应用实例并注册中间件
 app: FastAPI = FastAPI(lifespan=lifespan)
+app.add_middleware(middleware_class=CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.add_middleware(middleware_class=LoggingMiddleware)
 
 # 注册全局异常处理器
