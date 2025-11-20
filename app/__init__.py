@@ -7,15 +7,15 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # 导入异常处理器
-from app.exceptions.exception import (
+from app.exceptions import (
     global_exception_handler,
     validation_exception_handler,
     http_exception_handler
 )
 
 # 导入中间件
-from app.middleware.logging_middleware import LoggingMiddleware
-from app.middleware.cors_middleware import CORSMiddleware
+from app.middleware import LoggingMiddleware
+from app.middleware import CORSMiddleware
 
 # 创建FastAPI应用实例并注册中间件
 app: FastAPI = FastAPI(lifespan=lifespan)

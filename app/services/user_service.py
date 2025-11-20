@@ -1,9 +1,14 @@
-from re import S
+import uuid
 from typing import List, Optional
+from venv import logger
+
+from fastapi import UploadFile
 from app.models.user import UserInDb
 from app.schemas.user import UserCreate, UserUpdate, UserOut
 from app.utils.encrypt import Encrypt
 from datetime import datetime
+
+from app.utils.minio_client import upload_avatar,delete_avatar
 
 
 class UserService:
@@ -131,4 +136,30 @@ class UserService:
             is_active=user_in_db.is_active,
             create_at=user_in_db.create_at
         )
+    
+    @staticmethod
+    async def upload_user_avatar(user_id: uuid.UUID, file: UploadFile)->str:
+        """上传用户头像"""
+        # 读取文件内容
+        file_data: bytes = await file.read()
+
+        # 生成唯一文件名
+        file_extension: str = file.filename.split(".")[-1] # type: ignore
+        unique_file_name: str = f"{uuid.uuid4()}.{file_extension}"
+
+        # 删除旧的头像
+        user_in_db: UserInDb = await UserInDb.get(id=user_id)
+        old_avatar = user_in_db.avatar_url
+        logger.info(f"Old avatar: {old_avatar}")
+        if old_avatar:
+            delete_avatar(old_avatar)
+
+        # 上传到MinIO
+        avatar_url:str = upload_avatar(file_data, unique_file_name)
+
+        # 更新用户记录中的avatar_url字段
+        await UserInDb.filter(id=user_id).update(avatar_url=avatar_url)
+
+        return avatar_url
+
     

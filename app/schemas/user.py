@@ -43,6 +43,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = Field(None, description="邮箱地址")
     name: Optional[str] = Field(None, description="用户名", min_length=3, max_length=18)
     is_active: Optional[bool] = Field(None, description="是否激活")
+    avatar_url: Optional[str] = Field(None, description="头像URL")
 
 # 用户响应模型
 class UserOut(UserBase):
@@ -50,3 +51,4 @@ class UserOut(UserBase):
     id: UUID = Field(..., examples=[UUID("6a322238-2134-47ea-8a2c-123456789abc")])
     is_active: bool
     create_at: datetime.datetime
+    avatar_url: Optional[str] = None

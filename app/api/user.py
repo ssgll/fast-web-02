@@ -1,9 +1,12 @@
-from fastapi import APIRouter
+from app.common.responses import DataResponse, ErrorResponse
+import uuid
+from fastapi import APIRouter, File, UploadFile
 from pydantic import EmailStr
 from typing import Union
 
 from app.core import logger
 from app.common import *
+from app.models.user import UserInDb
 from app.services import *
 from app.schemas import *
 
@@ -110,3 +113,27 @@ async def update_user(email: EmailStr, user_update: UserUpdate) -> Union[DataRes
     except Exception as e:
         logger.error(f"更新用户失败: {e}")
         return ResponseFactory.error(code=500, msg="更新用户失败", details=str(e))
+
+
+@router.post("/{user_id}/avatar",response_model=Union[DataResponse, ErrorResponse])
+async def upload_avatar_endpoint(user_id:uuid.UUID,file:UploadFile = File(...)) -> DataResponse | ErrorResponse:
+    """上传用户头像"""
+    try:
+        logger.info(f"开始上传用户头像: {user_id}")
+        avatar_url = await UserService.upload_user_avatar(user_id,file)
+
+        # 返回更新后的用户信息
+        user_in_db = await UserInDb.get(id=user_id)
+        user = UserOut(
+            id=user_in_db.id,
+            email=user_in_db.email,
+            name=user_in_db.name,
+            is_active=user_in_db.is_active,
+            create_at=user_in_db.create_at,
+            avatar_url=avatar_url
+        )
+        logger.info(f"用户头像上传成功: {user_id}")
+        return ResponseFactory.success(data=user)
+    except Exception as e:
+        logger.error(f"更新用户头像失败: {e}")
+        return ResponseFactory.error(code=500, msg="更新用户头像失败", details=str(e))

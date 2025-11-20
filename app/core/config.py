@@ -18,6 +18,15 @@ class Config(BaseSettings):
     DEBUG: bool = True
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+
+    # minio配置
+    MINIO_ENDPOINT: str = "127.0.0.1:9000"
+    MINIO_BUCKET_NAME: str = "test"
+    MINIO_SECRET_KEY: str = "ssgll"
+    MINIO_ACCESS_KEY: str = "ssgll"
+    MINIO_USE_SSL: bool = False
+
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_prefix="APP_",

@@ -21,30 +21,32 @@ async def get_current_user(token: str = Depends(dependency=oauth2_scheme)) -> Us
 
 
 @router.post("/login", response_model=DataResponse)
-async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> ErrorResponse | DataResponse:
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+) -> ErrorResponse | DataResponse:
     """用户登录接口"""
-    user: UserInDb | bool = await AuthService.authenticate_user(email=form_data.username, password=form_data.password)
+    user: UserInDb | bool = await AuthService.authenticate_user(
+        email=form_data.username, password=form_data.password
+    )
     if not user:
         return ResponseFactory.error(
             code=status.HTTP_401_UNAUTHORIZED,
             msg="用户名或密码错误",
-            error_code="AUTH_ERROR"
+            error_code="AUTH_ERROR",
         )
-    
+
     # 创建访问令牌
-    access_token_expires: timedelta = timedelta(minutes=AuthService.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires: timedelta = timedelta(
+        minutes=AuthService.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
     # 确保user是UserInDb类型
     user_db: UserInDb = cast(UserInDb, user)
     access_token: str = AuthService.create_access_token(
         data={"sub": user_db.email}, expires_delta=access_token_expires
     )
-    
+
     return ResponseFactory.success(
-        data={
-            "access_token": access_token,
-            "token_type": "bearer"
-        },
-        msg="登录成功"
+        data={"access_token": access_token, "token_type": "bearer"}, msg="登录成功"
     )
 
 
@@ -56,6 +58,6 @@ async def read_users_me(current_user: UserInDb = Depends(get_current_user)):
         name=current_user.name,
         email=current_user.email,
         is_active=current_user.is_active,
-        create_at=current_user.create_at
+        create_at=current_user.create_at,
     )
     return ResponseFactory.success(data=user_out, msg="获取用户信息成功")

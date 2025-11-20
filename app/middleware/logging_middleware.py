@@ -18,7 +18,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         
         # 记录请求信息
         logger.info(f"收到请求: {request.method} {request.url}")
-        logger.info(f"请求头: {dict(request.headers)}")
+        # logger.info(f"请求头: {dict(request.headers)}")
         
         # 处理请求并获取响应
         response = await call_next(request)
