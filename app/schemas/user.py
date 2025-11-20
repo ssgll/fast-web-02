@@ -1,7 +1,7 @@
 import datetime
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from uuid import UUID
-from typing import Optional
+from typing import Optional,List
 from pydantic import field_serializer
 
 
@@ -17,7 +17,7 @@ class UserCreate(UserBase):
         ...,
         description="用户名",
         examples=["john_doe"],
-        min_length=3,
+        min_length=1,
         max_length=18
     )
     email: EmailStr = Field(
@@ -46,7 +46,7 @@ class UserUpdate(BaseModel):
 
     password: Optional[str] = Field(None, description="密码")
     email: Optional[EmailStr] = Field(None, description="邮箱地址")
-    name: Optional[str] = Field(None, description="用户名", min_length=3, max_length=18)
+    name: Optional[str] = Field(None, description="用户名", min_length=1, max_length=18)
     is_active: Optional[bool] = Field(None, description="是否激活")
     avatar_url: Optional[str] = Field(None, description="头像URL")
 
@@ -71,3 +71,10 @@ class UserOut(UserBase):
 class UserLogin(BaseModel):
     username: str = Field(..., description="用户名", examples=["guo.orm.o@gmail.com"])
     password: str = Field(..., description="密码", min_length=8, examples=["StrongPassword12"])
+
+# 多条件模型
+class UserFilter(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    name: Optional[str] = Field(None, description="用户名", min_length=1, max_length=18)
+    email: Optional[EmailStr] = Field(None, description="邮箱地址")
+    is_active: Optional[List[bool]] = Field(None, description="是否激活")

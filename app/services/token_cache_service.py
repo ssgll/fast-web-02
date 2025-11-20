@@ -23,12 +23,10 @@ class TokenCacheService:
 
         expire_minutes = config.ACCESS_TOKEN_EXPIRE_MINUTES
         
-        key = f"{config.CACHE_REDIS_PREFIX}token:{token}"
+        key = f"{config.CACHE_REDIS_PREFIX}:token:{token}"
 
 
         value = json.dumps(user_info.to_dict())
-
-
 
         try:
             await redis_client.set(key, value, ex=expire_minutes * 60)
@@ -46,7 +44,7 @@ class TokenCacheService:
             Optional[dict]: 用户信息
         """
 
-        key = f"{config.CACHE_REDIS_PREFIX}token:{token}"
+        key = f"{config.CACHE_REDIS_PREFIX}:token:{token}"
 
         try:
             value = await redis_client.get(key)
@@ -66,7 +64,7 @@ class TokenCacheService:
             bool: 是否成功
         """
 
-        key = f"{config.CACHE_REDIS_PREFIX}token:{token}"
+        key = f"{config.CACHE_REDIS_PREFIX}:token:{token}"
         try:
             result = await redis_client.delete(key)
             return result > 0
@@ -74,13 +72,37 @@ class TokenCacheService:
             logger.error(f"移除token失败,{e}")
             return False
 
+
+    # 查询所有在线用户
     @staticmethod
-    async def is_token_valid(token:str)->bool:
-        """检查token是否有效
-        Args:
-            token (str): token
+    async def get_online_users() -> list:
+        """获取所有在线用户
         Returns:
-            bool: 是否有效
+            list: 在线用户列表
         """
-        user = await TokenCacheService.get_cached_user(token)
-        return user is not None
+        pattern = f"{config.CACHE_REDIS_PREFIX}:token:*"
+        keys = await redis_client.keys(pattern)
+        users = []
+        for key in keys:
+            user = await TokenCacheService.get_caached_user(key)
+            if user:
+                users.append(user)
+        return users
+
+    @staticmethod
+    async def remove_token_by_user_id(user_id: str) -> bool:
+        """根据用户ID移除token
+        Args:
+            user_id (str): 用户ID
+        Returns:
+            bool: 是否成功
+        """
+        # 遍历所有user_token 
+        pattern = f"{config.CACHE_REDIS_PREFIX}:token:*"
+        keys = await redis_client.keys(pattern)
+        for key in keys:
+            user = await TokenCacheService.get_cached_user(key)
+            if user and user.get("user_id") == user_id:
+                await redis_client.delete(key)
+                return True
+        return False

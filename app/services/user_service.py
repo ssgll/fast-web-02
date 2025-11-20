@@ -1,3 +1,4 @@
+import email
 import uuid
 from typing import List, Optional
 
@@ -6,12 +7,13 @@ from pydantic import EmailStr
 
 from app.core import logger
 from app.models.user import UserInDb
-from app.schemas.user import UserCreate, UserUpdate, UserOut
+from app.schemas.user import UserCreate, UserUpdate, UserOut,UserFilter
 from app.utils.encrypt import Encrypt
 from datetime import datetime
 
 from app.utils.minio_client import upload_file,delete_file
 from app.services.cache_service import cache_result, CacheService
+from tortoise.expressions import Q
 
 
 
@@ -74,6 +76,44 @@ class UserService:
                 avatar_url=user.avatar_url
             )
         return None
+
+    @staticmethod
+    # @cache_result("user", expire=300)  # 缓存5分钟
+    async def get_user_by_union(filter: UserFilter, page: int = 1, page_size: int = 10) -> List[UserOut]:
+        """多条件联合查询"""
+        query_conditions = Q()
+        if filter.name is not None:
+            query_conditions &= Q(name=filter.name)
+        if filter.email is not None:
+            query_conditions &= Q(email=filter.email)
+        # 优化 is_active 过滤逻辑
+        if filter.is_active is not None and len(filter.is_active) > 0:
+            # 如果同时包含 True 和 False，则不过滤 is_active 字段
+            if len(set(filter.is_active)) > 1:
+                # 同时包含 True 和 False，不添加过滤条件
+                pass
+            elif len(filter.is_active) == 1:
+                # 只包含一个值，精确匹配
+                query_conditions &= Q(is_active=filter.is_active[0])
+            else:
+                # 只包含相同的值（例如 [True, True]），只匹配一次
+                query_conditions &= Q(is_active=filter.is_active[0])
+        
+        total_users = await UserInDb.filter(query_conditions).count()
+        users = await UserInDb.filter(query_conditions).all().limit(page_size).offset((page - 1) * page_size)
+
+        if users is None:
+            return []
+            
+        user_list = [UserOut(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            is_active=user.is_active,
+            create_at=user.create_at,
+            avatar_url=user.avatar_url
+        ) for user in users]
+        return user_list, total_users
     
     @staticmethod
     async def create_user(user_create: UserCreate) -> Optional[UserOut]:
@@ -130,7 +170,7 @@ class UserService:
         return None
     
     @staticmethod
-    async def batch_delete_users(emails: List[str]) -> int:
+    async def batch_delete_users(emails: List[EmailStr]) -> int:
         """批量删除用户"""
         deleted_count = await UserInDb.filter(email__in=emails).delete()
         # 清除用户相关的缓存

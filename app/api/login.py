@@ -14,7 +14,7 @@ oauth2_schema: OAuth2PasswordBearer = OAuth2PasswordBearer(tokenUrl="login")
 router: APIRouter = APIRouter()
 
 
-async def get_current_user(token: str = Depends(oauth2_schema)) -> UserInDb:
+async def get_current_user(token: str = Depends(oauth2_schema),) -> UserInDb:
     """获取当前用户"""
     return await AuthService.get_current_user(token)
 
@@ -29,10 +29,10 @@ async def login(
         email=user_login.username, password=user_login.password
     )
     logger.info(f"用户认证结果: {user}")
-    if not user:
+    if not isinstance(user, UserInDb):
         return ResponseFactory.error(
             code=status.HTTP_401_UNAUTHORIZED,
-            msg="用户名或密码错误",
+            msg=user.get("detail"),
             error_code="AUTH_ERROR",
         )
 
@@ -40,13 +40,6 @@ async def login(
     access_token_expires: timedelta = timedelta(
         minutes=AuthService.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-
-    if not isinstance(user, UserInDb):
-        return ResponseFactory.error(
-            code=status.HTTP_401_UNAUTHORIZED,
-            msg="未知错误",
-            error_code="AUTH_ERROR",
-        )
     access_token: str = AuthService.create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
@@ -74,12 +67,13 @@ async def read_users_me(current_user: UserInDb = Depends(get_current_user)):
 
 @router.get("/logout", response_model=Union[DataResponse, ErrorResponse])
 async def logout(
+        current_user: UserInDb = Depends(get_current_user),
         token: str = Depends(oauth2_schema)
 ) -> Union[DataResponse, ErrorResponse]:
     """用户登出接口"""
     # 即使移除token失败，也认为登出是成功的
     # 因为客户端销毁token后，即使服务器端没有成功移除，也不会影响安全性
-    await AuthService.remove_token(token)
+    await AuthService.remove_token(current_user.id,token)
     return ResponseFactory.success(msg="登出成功")
 
 
