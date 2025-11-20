@@ -144,6 +144,7 @@ tests/
 test_*.py
 *_test.py
 
+
 # Local development files
 *.local
 *.dev
@@ -164,3 +165,10 @@ env/
 # OS generated files
 Thumbs.db
 .DS_Store
+
+
+# logs
+logs/
+*.log
+app.log
+logs/*
