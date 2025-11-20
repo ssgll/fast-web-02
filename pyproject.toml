@@ -19,6 +19,7 @@ dependencies = [
     "python-jose>=3.3.0",
     "jose>=1.0.0",
     "minio>=7.1.0",
+    "aioredis>=2.0.1",
 ]
 
 [[tool.uv.index]]

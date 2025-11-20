@@ -26,6 +26,17 @@ class Config(BaseSettings):
     MINIO_ACCESS_KEY: str = "ssgll"
     MINIO_USE_SSL: bool = False
 
+    # 缓存配置
+    CACHE_TYPE: str = "redis"
+    CACHE_REDIS_HOST: str = "127.0.0.1"
+    CACHE_REDIS_PORT: int = 6379
+    CACHE_REDIS_PASSWORD: str = ""
+    CACHE_REDIS_DB: int = 0
+    CACHE_REDIS_SSL: bool = False
+    CACHE_REDIS_PREFIX: str = "fast:"
+    CACHE_REDIS_SENTINELS: list = []
+    REDIS_TIMEOUT: int = 3600
+
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -49,7 +60,7 @@ class Config(BaseSettings):
             },
             "apps": {
                 "models": {
-                    "models": ["app.models.user", "aerich.models"],
+                    "models": ["app.models.user","app.models.system", "aerich.models"],
                     "default_connection": "localhost",
                 }
             },

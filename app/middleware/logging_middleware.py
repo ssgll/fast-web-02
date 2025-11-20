@@ -19,6 +19,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # 记录请求信息
         logger.info(f"收到请求: {request.method} {request.url}")
         # logger.info(f"请求头: {dict(request.headers)}")
+        # logger.info(f"请求体: {await request.json()}")
         
         # 处理请求并获取响应
         response = await call_next(request)
@@ -27,7 +28,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         process_time = time.time() - start_time
         
         # 记录响应信息
-        logger.info(f"响应状态: {response.status_code}")
-        logger.info(f"处理耗时: {process_time:.4f}秒")
+        # logger.info(f"响应状态: {response.status_code}")
+        # logger.info(f"处理耗时: {process_time:.4f}秒")
         
         return response

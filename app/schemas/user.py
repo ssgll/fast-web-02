@@ -2,6 +2,7 @@ import datetime
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from uuid import UUID
 from typing import Optional
+from pydantic import field_serializer
 
 
 # 用户基础模型
@@ -34,6 +35,10 @@ class UserCreate(UserBase):
         default=True,
         description="是否激活"
     )
+    avatar_url: Optional[str] = Field(
+        default=None,
+        description="头像URL"
+    )
 
 # 用户更新模型
 class UserUpdate(BaseModel):
@@ -51,4 +56,18 @@ class UserOut(UserBase):
     id: UUID = Field(..., examples=[UUID("6a322238-2134-47ea-8a2c-123456789abc")])
     is_active: bool
     create_at: datetime.datetime
-    avatar_url: Optional[str] = None
+    avatar_url: Optional[str]
+    
+    @field_serializer('id')
+    def serialize_id(self, id: UUID) -> str:
+        return str(id)
+    
+    @field_serializer('create_at')
+    def serialize_create_at(self, create_at: datetime.datetime) -> str:
+        return create_at.isoformat()
+    
+
+# 登录模型
+class UserLogin(BaseModel):
+    username: str = Field(..., description="用户名", examples=["guo.orm.o@gmail.com"])
+    password: str = Field(..., description="密码", min_length=8, examples=["StrongPassword12"])

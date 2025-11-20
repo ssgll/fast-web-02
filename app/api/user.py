@@ -1,16 +1,14 @@
-from app.common.responses import DataResponse, ErrorResponse
-import uuid
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, UploadFile, status
 from pydantic import EmailStr
-from typing import Union
+from typing import Union, Annotated
+
+from urllib3.exceptions import NewConnectionError
 
 from app.core import logger
 from app.common import *
 from app.models.user import UserInDb
 from app.services import *
 from app.schemas import *
-
-
 
 router: APIRouter = APIRouter()
 
@@ -22,23 +20,9 @@ async def get_users_page(page: int = 1, page_size: int = 10) -> PageResponse | E
     try:
         logger.info("开始获取用户列表")
         user_list, total_users = await UserService.get_users_page(page, page_size)
-        logger.info(f"查询到 {len(user_list)} 个用户")
+
+        logger.info(f"查询到 {total_users} 个用户")
         return ResponseFactory.page_success(data=user_list, total=total_users, page=page, page_size=page_size)
-    except Exception as e:
-        logger.error(f"获取用户列表失败: {e}")
-        return ResponseFactory.error(code=500, msg="获取用户列表失败", details=str(e))
-
-
-# 获取用户列表
-@router.get("/", response_model=Union[ListDataResponse, ErrorResponse])
-async def get_users() -> Union[ListDataResponse, ErrorResponse]:
-    """获取所有用户列表"""
-    try:
-        logger.info("开始获取用户列表")
-        user_list = await UserService.get_all_users()
-        logger.info(f"查询到 {len(user_list)} 个用户")
-        logger.info("用户列表获取成功")
-        return ResponseFactory.list_success(data=user_list)
     except Exception as e:
         logger.error(f"获取用户列表失败: {e}")
         return ResponseFactory.error(code=500, msg="获取用户列表失败", details=str(e))
@@ -61,24 +45,6 @@ async def get_user(email: EmailStr) -> Union[DataResponse, ErrorResponse]:
         return ResponseFactory.error(code=500, msg="查询用户失败", details=str(e))
 
 
-# 创建用户
-@router.post("/", response_model=Union[DataResponse, ErrorResponse])
-async def create_user(user_create: UserCreate) -> Union[DataResponse, ErrorResponse]:
-    """创建用户"""
-    try:
-        logger.info(f"开始创建用户: {user_create.email}")
-        user_out = await UserService.create_user(user_create)
-        if not user_out:
-            logger.warning(f"用户已存在: {user_create.email}")
-            return ResponseFactory.error(code=400, msg="用户已存在")
-        
-        logger.info(f"用户创建成功: {user_out.email}")
-        return ResponseFactory.success(data=user_out)
-    except Exception as e:
-        logger.error(f"创建用户失败: {e}")
-        return ResponseFactory.error(code=500, msg="创建用户失败", details=str(e))
-
-
 # 删除用户
 @router.delete("/{email}", response_model=Union[DataResponse, ErrorResponse])
 async def delete_user(email: EmailStr) -> Union[DataResponse, ErrorResponse]:
@@ -95,6 +61,17 @@ async def delete_user(email: EmailStr) -> Union[DataResponse, ErrorResponse]:
         logger.error(f"删除用户失败: {e}")
         return ResponseFactory.error(code=500, msg="删除用户失败", details=str(e))
 
+@router.delete("/batch", response_model=Union[DataResponse, ErrorResponse])
+async def delete_users_batch(emails: list[str]) -> Union[DataResponse, ErrorResponse]:
+    """批量删除用户"""
+    try:
+        logger.info(f"开始批量删除用户: {emails}")
+        deleted_count = await UserService.batch_delete_users(emails)
+        logger.info(f"用户批量删除成功: {emails}")
+        return ResponseFactory.success(data={"deleted_count": deleted_count})
+    except Exception as e:
+        logger.error(f"批量删除用户失败: {e}")
+        return ResponseFactory.error(code=500, msg="批量删除用户失败", details=str(e))
 
 # 修改用户
 @router.patch("/{email}", response_model=Union[DataResponse, ErrorResponse])
@@ -115,25 +92,37 @@ async def update_user(email: EmailStr, user_update: UserUpdate) -> Union[DataRes
         return ResponseFactory.error(code=500, msg="更新用户失败", details=str(e))
 
 
-@router.post("/{user_id}/avatar",response_model=Union[DataResponse, ErrorResponse])
-async def upload_avatar_endpoint(user_id:uuid.UUID,file:UploadFile = File(...)) -> DataResponse | ErrorResponse:
+@router.post("/{email}/avatar", response_model=Union[DataResponse, ErrorResponse])
+async def upload_avatar_endpoint(email: Annotated[str,EmailStr], file: UploadFile = File(...)) -> DataResponse | ErrorResponse:
     """上传用户头像"""
     try:
-        logger.info(f"开始上传用户头像: {user_id}")
-        avatar_url = await UserService.upload_user_avatar(user_id,file)
+
+        user_in_db = await UserInDb.filter(email=email).get_or_none()
+        if not user_in_db:
+            return ResponseFactory.error(code=404, msg="用户不存在", details="user not in db")
+
+        logger.info(f"开始上传用户头像: {email}")
+        avatar_url = await UserService.upload_user_avatar(user_in_db.id, file)
+
+        if not avatar_url:
+            logger.error(f"用户头像上传失败")
+            return ResponseFactory.error(code=status.HTTP_201_CREATED, msg="用户头像格式错误")
 
         # 返回更新后的用户信息
-        user_in_db = await UserInDb.get(id=user_id)
+
         user = UserOut(
             id=user_in_db.id,
             email=user_in_db.email,
             name=user_in_db.name,
             is_active=user_in_db.is_active,
             create_at=user_in_db.create_at,
-            avatar_url=avatar_url
+            avatar_url=user_in_db.avatar_url
         )
-        logger.info(f"用户头像上传成功: {user_id}")
+        logger.info(f"用户头像上传成功: {email}")
         return ResponseFactory.success(data=user)
+    except NewConnectionError as e:
+        logger.error(f"附件服务器无法连接: {e}")
+        return ResponseFactory.error(code=500, msg="附件服务器无法连接", details=str(e))
     except Exception as e:
         logger.error(f"更新用户头像失败: {e}")
         return ResponseFactory.error(code=500, msg="更新用户头像失败", details=str(e))

@@ -1,4 +1,4 @@
-from .exception import (
+from .exceptions import (
     global_exception_handler,
     validation_exception_handler,
     http_exception_handler
